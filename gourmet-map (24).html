@@ -1,0 +1,1674 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>ふたりのグルメマップ</title>
+<style>
+/* ===== RESET & VARIABLES ===== */
+:root {
+  --bg: #faf9f6;
+  --surface: #ffffff;
+  --surface2: #f3f1ec;
+  --border: #e2dfd8;
+  --text: #2c2a25;
+  --text2: #7a7670;
+  --accent: #c8563a;
+  --accent-light: #fdf1ee;
+  --star: #e6a817;
+  --green: #2d8a4e;
+  --blue: #2d6fa8;
+  --shadow: 0 2px 16px rgba(0,0,0,0.09);
+  --shadow-lg: 0 8px 32px rgba(0,0,0,0.14);
+  --r: 12px;
+  --r-sm: 8px;
+}
+.gm-err-container, .gm-err-content, .gm-err-message, .gm-err-icon, .gm-err-autocomplete-list { display: none !important; }
+/* Google Maps エラーダイアログを非表示 */
+div[style*="z-index: 1000000"], .gm-style > div:last-child > div:last-child > div[style*="position: absolute"] { pointer-events: none !important; }
+
+body { font-family: 'Hiragino Kaku Gothic ProN','Noto Sans JP','YuGothic',sans-serif; background: var(--bg); color: var(--text); height: 100dvh; display: flex; flex-direction: column; overflow: hidden; font-size: 15px; }
+
+/* ===== HEADER ===== */
+header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0 14px; height: 54px; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; z-index: 900; gap: 8px; }
+.logo { font-size: 15px; font-weight: 700; color: var(--accent); white-space: nowrap; display: flex; align-items: center; gap: 6px; }
+.logo-sub { font-size: 11px; color: var(--text2); font-weight: 400; background: var(--surface2); padding: 2px 8px; border-radius: 100px; }
+.hdr-btns { display: flex; gap: 6px; flex-shrink: 0; }
+
+/* ===== BUTTONS ===== */
+.btn { border: 1px solid var(--border); background: var(--surface); color: var(--text); padding: 7px 14px; border-radius: var(--r-sm); font-size: 13px; cursor: pointer; transition: all 0.15s; white-space: nowrap; font-family: inherit; line-height: 1; }
+.btn:hover { background: var(--surface2); }
+.btn:active { transform: scale(0.97); }
+.btn-primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.btn-primary:hover { background: #a84530; }
+.btn-green { background: var(--green); border-color: var(--green); color: #fff; }
+.btn-green:hover { background: #226e3e; }
+.btn-danger { border-color: #e53935; color: #e53935; }
+.btn-danger:hover { background: #fdecea; }
+.btn-icon { padding: 7px 10px; }
+.btn-full { width: 100%; margin-bottom: 8px; padding: 11px; font-size: 14px; }
+
+/* ===== LAYOUT ===== */
+.app-body { flex: 1; display: flex; overflow: hidden; min-height: 0; }
+#map { flex: 1; min-width: 0; }
+
+/* ===== PANEL ===== */
+.panel { width: 380px; background: var(--surface); border-left: 1px solid var(--border); display: flex; flex-direction: column; overflow: hidden; flex-shrink: 0; }
+.panel-tabs { display: flex; border-bottom: 1px solid var(--border); flex-shrink: 0; background: var(--surface); }
+.tab { flex: 1; padding: 13px 4px; font-size: 12px; text-align: center; cursor: pointer; color: var(--text2); border-bottom: 2.5px solid transparent; transition: all 0.15s; user-select: none; }
+.tab.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 700; }
+.tab-icon { font-size: 16px; display: block; margin-bottom: 2px; }
+.panel-body { flex: 1; overflow-y: auto; }
+
+/* ===== STATS BAR ===== */
+.stats { display: flex; gap: 0; border-bottom: 1px solid var(--border); flex-shrink: 0; }
+.stat { flex: 1; padding: 8px 4px; text-align: center; border-right: 1px solid var(--border); }
+.stat:last-child { border-right: none; }
+.stat-val { font-size: 17px; font-weight: 700; color: var(--accent); line-height: 1; }
+.stat-lbl { font-size: 10px; color: var(--text2); margin-top: 2px; }
+
+/* ===== FORMS ===== */
+.form-wrap { padding: 14px; }
+.fg { margin-bottom: 13px; }
+label { display: block; font-size: 11px; font-weight: 700; color: var(--text2); margin-bottom: 5px; letter-spacing: 0.5px; text-transform: uppercase; }
+input[type=text], input[type=date], input[type=url], input[type=number], textarea, select {
+  width: 100%; padding: 9px 12px; border: 1px solid var(--border); border-radius: var(--r-sm);
+  font-size: 14px; font-family: inherit; background: var(--bg); color: var(--text);
+  transition: border-color 0.15s; outline: none; -webkit-appearance: none;
+}
+input:focus, textarea:focus, select:focus { border-color: var(--accent); background: #fff; }
+textarea { resize: vertical; min-height: 70px; line-height: 1.6; }
+.required { color: var(--accent); }
+
+/* Star rating */
+.stars-input { display: flex; gap: 3px; }
+.star-btn { font-size: 28px; cursor: pointer; color: #ddd; transition: color 0.1s, transform 0.1s; line-height: 1; background: none; border: none; padding: 2px; }
+.star-btn.on { color: var(--star); }
+.star-btn:hover { transform: scale(1.15); }
+
+/* Tags */
+.tags-wrap { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+.tag { padding: 4px 11px; border-radius: 100px; border: 1px solid var(--border); font-size: 12px; cursor: pointer; background: var(--surface); color: var(--text2); transition: all 0.15s; user-select: none; }
+.tag.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+.tag-add-row { display: flex; gap: 6px; margin-top: 8px; }
+.tag-add-row input { flex: 1; }
+
+/* Want again toggle */
+.toggle-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 0; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }
+.toggle-label { font-size: 14px; display: flex; align-items: center; gap: 6px; }
+.toggle { position: relative; width: 46px; height: 26px; }
+.toggle input { opacity: 0; width: 0; height: 0; }
+.toggle-slider { position: absolute; inset: 0; background: #ccc; border-radius: 100px; cursor: pointer; transition: 0.2s; }
+.toggle-slider:before { content:''; position: absolute; width: 20px; height: 20px; left: 3px; bottom: 3px; background: #fff; border-radius: 50%; transition: 0.2s; }
+.toggle input:checked + .toggle-slider { background: var(--accent); }
+.toggle input:checked + .toggle-slider:before { transform: translateX(20px); }
+
+/* Photo upload */
+.photo-area { border: 2px dashed var(--border); border-radius: var(--r-sm); padding: 16px; text-align: center; cursor: pointer; transition: all 0.15s; font-size: 13px; color: var(--text2); position: relative; }
+.photo-area:hover { border-color: var(--accent); background: var(--accent-light); }
+.photo-area img { width: 100%; border-radius: 6px; max-height: 160px; object-fit: cover; display: block; }
+.photo-area .remove-photo { position: absolute; top: 6px; right: 6px; background: rgba(0,0,0,0.55); color: #fff; border: none; border-radius: 50%; width: 24px; height: 24px; font-size: 14px; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+
+/* Location search */
+.loc-wrap { position: relative; }
+.loc-results { position: absolute; top: 100%; left: 0; right: 0; background: var(--surface); border: 1px solid var(--border); border-top: none; border-radius: 0 0 var(--r-sm) var(--r-sm); z-index: 200; max-height: 220px; overflow-y: auto; box-shadow: var(--shadow); }
+.loc-item { padding: 10px 12px; cursor: pointer; border-bottom: 1px solid var(--border); }
+.loc-item:last-child { border-bottom: none; }
+.loc-item:hover { background: var(--surface2); }
+.loc-item-name { font-size: 13px; font-weight: 600; }
+.loc-item-addr { font-size: 11px; color: var(--text2); margin-top: 2px; }
+.loc-set { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--green); padding: 6px 10px; background: #edf7f1; border-radius: 6px; margin-top: 5px; }
+
+/* ===== SPOT CARDS ===== */
+.list-controls { padding: 10px 12px; border-bottom: 1px solid var(--border); display: flex; flex-direction: column; gap: 8px; flex-shrink: 0; }
+.search-input { width: 100%; padding: 8px 12px 8px 34px; border: 1px solid var(--border); border-radius: var(--r-sm); font-size: 13px; font-family: inherit; background: var(--surface2); outline: none; }
+.search-wrap { position: relative; }
+.search-icon { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); font-size: 14px; pointer-events: none; }
+.filter-row { display: flex; gap: 5px; flex-wrap: wrap; }
+.pill { padding: 4px 11px; border-radius: 100px; border: 1px solid var(--border); font-size: 11px; cursor: pointer; background: var(--surface); color: var(--text2); transition: all 0.15s; user-select: none; white-space: nowrap; }
+.pill.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+.pill-want { }
+.pill-want.on { background: #e87a5d; border-color: #e87a5d; }
+
+.spot-list { padding: 10px 12px; display: flex; flex-direction: column; gap: 9px; }
+.spot-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); padding: 12px 13px; cursor: pointer; transition: all 0.15s; position: relative; }
+.spot-card:hover { border-color: #c8563a88; box-shadow: var(--shadow); }
+.spot-card.selected { border-color: var(--accent); box-shadow: 0 0 0 2px #c8563a22; }
+.spot-card-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.spot-card-left { flex: 1; min-width: 0; }
+.spot-name { font-size: 14px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.spot-row2 { display: flex; align-items: center; gap: 7px; margin-top: 4px; flex-wrap: wrap; }
+.stars-disp { color: var(--star); font-size: 12px; letter-spacing: 1px; }
+.spot-date { font-size: 11px; color: var(--text2); }
+.spot-visits { font-size: 11px; color: var(--text2); background: var(--surface2); padding: 1px 7px; border-radius: 100px; }
+.want-badge { font-size: 10px; background: #fde8e2; color: var(--accent); padding: 2px 8px; border-radius: 100px; font-weight: 700; }
+.spot-thumb { width: 58px; height: 58px; border-radius: 8px; object-fit: cover; flex-shrink: 0; }
+.spot-tags-row { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+.spot-tag { font-size: 10px; background: var(--surface2); color: var(--text2); padding: 2px 8px; border-radius: 100px; }
+.spot-memo { font-size: 12px; color: var(--text2); margin-top: 5px; line-height: 1.6; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.spot-actions { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; align-items: center; }
+.btn-xs { padding: 4px 10px; font-size: 11px; border-radius: 6px; }
+.spot-link { font-size: 12px; color: var(--accent); text-decoration: none; margin-right: auto; }
+.spot-link:hover { text-decoration: underline; }
+.visit-btn { font-size: 11px; color: var(--blue); border-color: var(--blue); }
+.visit-btn:hover { background: #eaf2fb; }
+
+/* ===== PLAN CARDS ===== */
+.plan-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); padding: 12px 13px; border-left: 3px solid var(--blue); }
+.plan-name { font-size: 14px; font-weight: 700; }
+.plan-memo { font-size: 12px; color: var(--text2); margin-top: 4px; }
+.plan-actions { display: flex; gap: 6px; margin-top: 8px; }
+
+/* ===== MAP POPUP ===== */
+.leaflet-popup-content-wrapper { border-radius: var(--r) !important; box-shadow: var(--shadow-lg) !important; }
+.leaflet-popup-content { font-family: 'Hiragino Kaku Gothic ProN','Noto Sans JP',sans-serif !important; margin: 12px 14px !important; min-width: 180px; }
+.popup-img { width: 100%; height: 110px; object-fit: cover; border-radius: 8px; margin-bottom: 8px; }
+.popup-name { font-weight: 700; font-size: 14px; }
+.popup-stars { color: var(--star); font-size: 13px; margin: 3px 0; }
+.popup-meta { font-size: 11px; color: #888; }
+.popup-tags { display: flex; flex-wrap: wrap; gap: 3px; margin: 5px 0; }
+.popup-tag { font-size: 10px; background: #f3f1ec; color: #666; padding: 1px 7px; border-radius: 100px; }
+.popup-memo { font-size: 12px; color: #555; margin: 5px 0; line-height: 1.5; }
+.popup-btns { display: flex; gap: 6px; margin-top: 8px; }
+.popup-btn { flex: 1; padding: 6px; border-radius: 6px; border: 1px solid #ddd; background: #fff; font-size: 12px; cursor: pointer; text-align: center; color: #333; text-decoration: none; display: block; }
+.popup-btn:hover { background: #f5f5f5; }
+.popup-btn-primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.popup-want-badge { font-size: 10px; background: #fde8e2; color: #c8563a; padding: 2px 8px; border-radius: 100px; display: inline-block; margin-bottom: 4px; }
+
+/* ===== MODAL ===== */
+.overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.45); z-index: 1000; display: none; align-items: center; justify-content: center; padding: 16px; }
+.overlay.open { display: flex; }
+.modal { background: var(--surface); border-radius: 16px; width: 100%; max-width: 500px; max-height: 92dvh; overflow-y: auto; box-shadow: var(--shadow-lg); display: flex; flex-direction: column; }
+.modal-hdr { padding: 18px 20px 14px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; position: sticky; top: 0; background: var(--surface); z-index: 1; }
+.modal-title { font-size: 16px; font-weight: 700; }
+.modal-close { background: none; border: none; font-size: 22px; cursor: pointer; color: var(--text2); line-height: 1; padding: 0 2px; }
+.modal-body { padding: 16px 20px; flex: 1; overflow-y: auto; }
+.modal-foot { padding: 14px 20px; border-top: 1px solid var(--border); display: flex; gap: 8px; justify-content: flex-end; flex-shrink: 0; }
+
+/* ===== SETUP SCREEN ===== */
+.setup-screen { position: fixed; inset: 0; background: var(--bg); z-index: 2000; display: flex; align-items: center; justify-content: center; padding: 24px; }
+.setup-card { background: var(--surface); border-radius: 20px; padding: 28px; width: 100%; max-width: 460px; box-shadow: var(--shadow-lg); }
+.setup-title { font-size: 22px; font-weight: 700; color: var(--accent); margin-bottom: 6px; }
+.setup-sub { font-size: 13px; color: var(--text2); margin-bottom: 22px; line-height: 1.7; }
+.setup-step { background: var(--surface2); border-radius: var(--r-sm); padding: 12px; margin-bottom: 16px; font-size: 13px; line-height: 1.8; }
+.setup-step strong { color: var(--accent); }
+
+/* ===== SHARE MODAL ===== */
+.share-url { word-break: break-all; background: var(--surface2); border-radius: var(--r-sm); padding: 10px 12px; font-size: 12px; color: var(--text); margin: 10px 0; border: 1px solid var(--border); }
+
+/* ===== EMPTY ===== */
+.empty { text-align: center; color: var(--text2); padding: 40px 20px; font-size: 14px; line-height: 2; }
+
+/* ===== TOAST ===== */
+.toast { position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%) translateY(10px); background: #2c2a25; color: #fff; padding: 10px 20px; border-radius: 100px; font-size: 13px; z-index: 3000; opacity: 0; transition: all 0.25s; pointer-events: none; white-space: nowrap; box-shadow: 0 4px 16px rgba(0,0,0,0.25); }
+.toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+/* ===== LOADING ===== */
+.loading { display: flex; align-items: center; justify-content: center; gap: 10px; padding: 30px; color: var(--text2); font-size: 13px; }
+.spinner { width: 20px; height: 20px; border: 2px solid var(--border); border-top-color: var(--accent); border-radius: 50%; animation: spin 0.7s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 680px) {
+  .panel { width: 100%; border-left: none; border-top: 1px solid var(--border); max-height: 50dvh; }
+  .app-body { flex-direction: column; }
+  #map { flex: 1; }
+  .logo-sub { display: none; }
+}
+</style>
+</head>
+<body>
+
+<!-- SETUP SCREEN -->
+<div class="setup-screen" id="setup-screen">
+  <div class="setup-card">
+    <div class="setup-title">🍽 ふたりのグルメマップ</div>
+    <div class="setup-sub">初回設定を行います。Google Maps API キーと GAS デプロイ URL を入力してください。</div>
+    <div class="setup-step">
+      <strong>① Google Maps API キーの取得</strong><br>
+      Google Cloud Console → Maps JavaScript API + Places API を有効化 → 認証情報からキーを発行
+    </div>
+    <div class="fg">
+      <label>Google Maps API キー <span class="required">*</span></label>
+      <input type="text" id="setup-api-key" placeholder="AIzaSy..." autocomplete="off">
+    </div>
+    <div class="setup-step">
+      <strong>② GAS のデプロイ URL</strong><br>
+      スプレッドシート → 拡張機能 → Apps Script → GASコードを貼り付け → デプロイ（ウェブアプリ、全員アクセス可）→ URL をコピー
+    </div>
+    <div class="fg">
+      <label>GAS デプロイ URL <span class="required">*</span></label>
+      <input type="text" id="setup-gas-url" placeholder="https://script.google.com/macros/s/...">
+    </div>
+    <button class="btn btn-primary btn-full" onclick="saveSetup()">設定を保存してはじめる</button>
+    <div style="text-align:center;margin-top:4px">
+      <button class="btn" style="font-size:12px;color:var(--text2)" onclick="useDemo()">デモモードで試す（データ保存なし）</button>
+    </div>
+  </div>
+</div>
+
+<!-- HEADER -->
+<header>
+  <div class="logo">🍽 グルメマップ <span class="logo-sub" id="hdr-count">0件</span></div>
+  <div class="hdr-btns">
+    <button class="btn btn-icon" onclick="openSettings()" title="設定">⚙️</button>
+    <button class="btn btn-icon" onclick="openImportModal()" title="タイムラインインポート">📥</button>
+    <button class="btn btn-green" onclick="openPlanModal()">📋 行きたい</button>
+    <button class="btn btn-primary" onclick="openSpotModal()">＋ 追加</button>
+  </div>
+</header>
+
+<!-- MAIN -->
+<div class="app-body">
+  <div id="map"></div>
+  <div class="panel">
+    <div class="stats" id="stats-bar">
+      <div class="stat"><div class="stat-val" id="s-total">0</div><div class="stat-lbl">スポット</div></div>
+      <div class="stat"><div class="stat-val" id="s-avg">—</div><div class="stat-lbl">平均★</div></div>
+      <div class="stat"><div class="stat-val" id="s-want">0</div><div class="stat-lbl">また行く</div></div>
+      <div class="stat"><div class="stat-val" id="s-plans">0</div><div class="stat-lbl">プラン</div></div>
+    </div>
+    <div class="panel-tabs">
+      <div class="tab active" id="tab-spots" onclick="switchTab('spots')"><span class="tab-icon">🗺</span>スポット</div>
+      <div class="tab" id="tab-plans" onclick="switchTab('plans')"><span class="tab-icon">📋</span>プラン</div>
+    </div>
+    <div id="list-controls-wrap"></div>
+    <div class="panel-body" id="panel-body">
+      <div class="loading"><div class="spinner"></div>読み込み中...</div>
+    </div>
+  </div>
+</div>
+
+<!-- SPOT MODAL -->
+<div class="overlay" id="spot-modal">
+  <div class="modal">
+    <div class="modal-hdr">
+      <div class="modal-title" id="spot-modal-title">お店を追加</div>
+      <button class="modal-close" onclick="closeModal('spot-modal')">×</button>
+    </div>
+    <div class="modal-body" id="spot-modal-body"></div>
+    <div class="modal-foot">
+      <button class="btn" onclick="closeModal('spot-modal')">キャンセル</button>
+      <button class="btn btn-primary" onclick="saveSpot()">💾 保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- PLAN MODAL -->
+<div class="overlay" id="plan-modal">
+  <div class="modal">
+    <div class="modal-hdr">
+      <div class="modal-title" id="plan-modal-title">行きたいリストに追加</div>
+      <button class="modal-close" onclick="closeModal('plan-modal')">×</button>
+    </div>
+    <div class="modal-body" id="plan-modal-body"></div>
+    <div class="modal-foot">
+      <button class="btn" onclick="closeModal('plan-modal')">キャンセル</button>
+      <button class="btn btn-primary" onclick="savePlan()">💾 保存</button>
+    </div>
+  </div>
+</div>
+
+<!-- IMPORT MODAL -->
+<div class="overlay" id="import-modal">
+  <div class="modal" style="max-width:520px">
+    <div class="modal-hdr">
+      <div class="modal-title">📥 タイムラインからインポート</div>
+      <button class="modal-close" onclick="closeModal('import-modal')">×</button>
+    </div>
+    <div class="modal-body" id="import-modal-body">
+      <p style="font-size:13px;color:var(--text2);margin-bottom:14px;line-height:1.8">
+        GoogleマップのタイムラインJSONファイルを読み込み、飲食店だけを絞り込んでインポートできます。
+      </p>
+      <div id="import-drop-zone" style="border:2px dashed var(--border);border-radius:var(--r);padding:28px;text-align:center;cursor:pointer;transition:all 0.15s;color:var(--text2);font-size:14px"
+        onclick="document.getElementById('import-file-input').click()"
+        ondragover="event.preventDefault();this.style.borderColor='var(--accent)';this.style.background='var(--accent-light)'"
+        ondragleave="this.style.borderColor='';this.style.background=''"
+        ondrop="onImportDrop(event)">
+        <div style="font-size:36px;margin-bottom:8px">📂</div>
+        <div>タップまたはドロップで<br>Timeline.jsonを選択</div>
+      </div>
+      <input type="file" id="import-file-input" accept=".json" style="display:none" onchange="onImportFileSelect(event)">
+      <div style="background:var(--surface2);border-radius:var(--r-sm);padding:12px;font-size:12px;color:var(--text2);line-height:1.8;margin-top:14px">
+        <strong>📱 ファイルの取り出し方（Android）</strong><br>
+        Googleマップ → プロフィールアイコン → タイムライン → ︙メニュー → ロケーション履歴の設定 → タイムラインデータをエクスポート
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- IMPORT PREVIEW MODAL -->
+<div class="overlay" id="import-preview-modal">
+  <div class="modal" style="max-width:560px">
+    <div class="modal-hdr">
+      <div class="modal-title" id="import-preview-title">インポート内容を確認</div>
+      <button class="modal-close" onclick="closeModal('import-preview-modal')">×</button>
+    </div>
+    <div class="modal-body">
+      <div id="import-filter-bar" style="margin-bottom:12px"></div>
+      <div style="font-size:12px;color:var(--text2);margin-bottom:10px" id="import-count-label"></div>
+      <div id="import-preview-list" style="max-height:380px;overflow-y:auto;display:flex;flex-direction:column;gap:8px"></div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn" onclick="closeModal('import-preview-modal')">キャンセル</button>
+      <button class="btn btn-primary" onclick="executeImport()">✅ チェックした件数をインポート</button>
+    </div>
+  </div>
+</div>
+
+<!-- SHARE MODAL -->
+<div class="overlay" id="share-modal">
+  <div class="modal" style="max-width:400px">
+    <div class="modal-hdr">
+      <div class="modal-title">共有リンク</div>
+      <button class="modal-close" onclick="closeModal('share-modal')">×</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:13px;color:var(--text2);margin-bottom:10px">このお店の情報を共有するリンクです。</p>
+      <div class="share-url" id="share-url-text"></div>
+      <button class="btn btn-primary btn-full" onclick="copyShareUrl()">📋 URLをコピー</button>
+    </div>
+  </div>
+</div>
+
+<!-- SETTINGS MODAL -->
+<div class="overlay" id="settings-modal">
+  <div class="modal" style="max-width:400px">
+    <div class="modal-hdr">
+      <div class="modal-title">設定</div>
+      <button class="modal-close" onclick="closeModal('settings-modal')">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="fg"><label>Google Maps API キー</label><input type="text" id="cfg-api" placeholder="AIzaSy..."></div>
+      <div class="fg"><label>GAS デプロイ URL</label><input type="text" id="cfg-gas" placeholder="https://script.google.com/macros/s/..."></div>
+      <div style="display:flex;gap:8px;margin-top:4px">
+        <button class="btn btn-primary" style="flex:1" onclick="applySettings()">保存</button>
+        <button class="btn btn-danger" onclick="resetSettings()">リセット</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ===== CONFIG =====
+const LS_CFG = 'gmt_cfg_v1';
+const LS_TAGS = 'gmt_tags_v1';
+let cfg = JSON.parse(localStorage.getItem(LS_CFG) || 'null');
+let demoMode = false;
+
+// ===== STATE =====
+let spots = [], plans = [], map, markerCluster, markers = {};
+let editSpotId = null, editPlanId = null;
+let currentTab = 'spots';
+let filterStar = 0, filterWant = false, filterTag = '', searchQ = '';
+let pendingLat = null, pendingLng = null;
+let editStars = 0;
+let editTags = [];
+let editWantAgain = false;
+let editPhotoDataUrl = null;
+let customTags = JSON.parse(localStorage.getItem(LS_TAGS) || '[]');
+const DEFAULT_TAGS = ['ラーメン','カフェ','イタリアン','焼肉','寿司','居酒屋','フレンチ','カレー','スイーツ','中華'];
+
+// ===== INIT =====
+window.addEventListener('load', () => {
+  if (!cfg) {
+    // Check URL params (shared link)
+    const params = new URLSearchParams(location.search);
+    if (params.get('share')) { handleShareLink(params); return; }
+    document.getElementById('setup-screen').style.display = 'flex';
+  } else {
+    document.getElementById('setup-screen').style.display = 'none';
+    initApp();
+  }
+});
+
+function saveSetup() {
+  const key = document.getElementById('setup-api-key').value.trim();
+  const url = document.getElementById('setup-gas-url').value.trim();
+  if (!key || !url) { toast('APIキーとURLを入力してください'); return; }
+  cfg = { apiKey: key, gasUrl: url };
+  localStorage.setItem(LS_CFG, JSON.stringify(cfg));
+  document.getElementById('setup-screen').style.display = 'none';
+  initApp();
+}
+
+function useDemo() {
+  demoMode = true;
+  cfg = { apiKey: '', gasUrl: '' };
+  document.getElementById('setup-screen').style.display = 'none';
+  spots = getDemoSpots();
+  plans = [];
+  initMapOnly();
+  renderAll();
+  toast('デモモード：データは保存されません');
+}
+
+function initApp() {
+  loadGoogleMaps(cfg.apiKey);
+}
+
+function loadGoogleMaps(apiKey) {
+  // エラーを隠すCSSを先に追加
+  const style = document.createElement('style');
+  style.textContent = `
+    .gm-err-container, .gm-err-content, .gm-err-message, .gm-err-icon,
+    .gm-err-autocomplete-list, [class^="gm-err"], [class*=" gm-err"],
+    div[style*="z-index: 1000000"] { display: none !important; visibility: hidden !important; }
+  `;
+  document.head.appendChild(style);
+
+  const s = document.createElement('script');
+  s.src = `https://maps.googleapis.com/maps/api/js?key=${apiKey}&libraries=places,marker&callback=onMapReady&v=weekly`;
+  s.async = true; s.defer = true;
+  document.head.appendChild(s);
+  const c = document.createElement('script');
+  c.src = 'https://unpkg.com/@googlemaps/markerclusterer/dist/index.umd.js';
+  document.head.appendChild(c);
+}
+
+let placesAutocomplete = null;
+let placesGeocoder = null;
+let markerClusterGroup = null;
+
+window.onMapReady = function() {
+  map = new google.maps.Map(document.getElementById('map'), {
+    center: { lat: 36.5, lng: 137.0 },
+    zoom: 6,
+    mapTypeControl: false,
+    streetViewControl: false,
+    fullscreenControl: false,
+    mapId: 'DEMO_MAP_ID',
+  });
+  map.addListener('click', onMapClick);
+  placesAutocomplete = new google.maps.places.AutocompleteService();
+  placesGeocoder = new google.maps.places.PlacesService(map);
+
+  fetchAll().then(() => startBackgroundGeocode());
+
+  // MutationObserverでエラーダイアログを継続監視・削除
+  new MutationObserver(() => {
+    document.querySelectorAll('.gm-err-container').forEach(el => el.remove());
+  }).observe(document.body, { childList: true, subtree: true });
+};
+
+function initMapOnly() {
+  document.getElementById('map').innerHTML = '<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;background:#f0ede6;color:#999;font-size:13px">デモモード</div>';
+}
+
+// ===== DATA =====
+async function fetchAll() {
+  if (demoMode) { renderAll(); return; }
+  try {
+    const [spotsRes, plansRes] = await Promise.all([
+      gasCall({ action: 'getSpots' }),
+      gasCall({ action: 'getPlans' }),
+    ]);
+    spots = spotsRes.data || [];
+    plans = plansRes.data || [];
+    renderAll();
+    fitBounds();
+  } catch(e) {
+    toast('データ取得エラー。設定を確認してください');
+    renderAll();
+  }
+}
+
+async function gasCall(body) {
+  const res = await fetch(cfg.gasUrl, {
+    method: 'POST',
+    body: JSON.stringify(body),
+    headers: { 'Content-Type': 'text/plain' },
+    redirect: 'follow',
+  });
+  return res.json();
+}
+
+// ===== MAP (Google Maps) =====
+function ratingColor(r) {
+  const c = ['#aaa','#e74c3c','#e67e22','#f1c40f','#2ecc71','#c8563a'];
+  return c[+r] || '#c8563a';
+}
+
+function makeGoogleMarker(s) {
+  const color = ratingColor(s.rating);
+  const r = +s.rating;
+  const label = r > 0 ? '★'.repeat(r) : '';
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="40" height="28">
+    <rect x="1" y="1" width="38" height="26" rx="13" ry="13" fill="${color}" stroke="white" stroke-width="2"/>
+    <text x="20" y="18" text-anchor="middle" fill="white" font-size="${r>0?'10':'6'}" font-family="sans-serif">${label||'●'}</text>
+  </svg>`;
+  const div = document.createElement('div');
+  div.innerHTML = svg;
+  div.style.cursor = 'pointer';
+  return div;
+}
+
+function renderMarkers() {
+  if (!map || !window.google) return;
+  const spotIds = new Set(spots.map(s => s.id));
+  Object.keys(markers).forEach(id => {
+    if (!spotIds.has(id)) { markers[id].map = null; delete markers[id]; }
+  });
+  const gmarkers = [];
+  spots.forEach(s => {
+    if (!s.lat || !s.lng) return;
+    if (markers[s.id]) { gmarkers.push(markers[s.id]); return; }
+    const m = new google.maps.marker.AdvancedMarkerElement({
+      map,
+      position: { lat: +s.lat, lng: +s.lng },
+      title: s.name,
+      content: makeGoogleMarker(s),
+    });
+    m.addListener('click', () => { showInfoWindow(s, m); highlightCard(s.id); });
+    markers[s.id] = m;
+    gmarkers.push(m);
+  });
+  if (window.markerClusterer) {
+    if (markerClusterGroup) markerClusterGroup.clearMarkers();
+    markerClusterGroup = new markerClusterer.MarkerClusterer({ map, markers: gmarkers });
+  }
+}
+
+function addMarker(s) {
+  if (!map || !window.google || !s.lat || !s.lng || markers[s.id]) return;
+  const m = new google.maps.marker.AdvancedMarkerElement({
+    map,
+    position: { lat: +s.lat, lng: +s.lng },
+    title: s.name,
+    content: makeGoogleMarker(s),
+  });
+  m.addListener('click', () => { showInfoWindow(s, m); highlightCard(s.id); });
+  markers[s.id] = m;
+}
+
+let infoWindow = null;
+function showInfoWindow(s, marker) {
+  if (infoWindow) infoWindow.close();
+  const stars = '★'.repeat(+s.rating||0) + '☆'.repeat(5-(+s.rating||0));
+  const tags = (Array.isArray(s.tags)?s.tags:[]).map(t=>`<span style="background:#f3f1ec;padding:1px 7px;border-radius:100px;font-size:10px">${esc(t)}</span>`).join('');
+  const wantAgain = s.wantAgain=='true'||s.wantAgain===true;
+  infoWindow = new google.maps.InfoWindow({ content: `
+    <div style="min-width:180px;max-width:250px;font-family:'Hiragino Kaku Gothic ProN',sans-serif">
+      ${s.photoUrl?`<img src="${esc(s.photoUrl)}" style="width:100%;height:100px;object-fit:cover;border-radius:6px;margin-bottom:6px" onerror="this.style.display='none'">`: ''}
+      ${wantAgain?'<span style="background:#fde8e2;color:#c8563a;padding:2px 8px;border-radius:100px;font-size:10px;font-weight:700">💕また行きたい</span><br>':''}
+      <div style="font-weight:700;font-size:14px;margin:4px 0">${esc(s.name)}</div>
+      <div style="color:#e6a817">${stars}</div>
+      ${tags?`<div style="margin:4px 0">${tags}</div>`:''}
+      ${s.memo?`<div style="font-size:12px;color:#555;margin:4px 0">${esc(s.memo)}</div>`:''}
+      <div style="font-size:11px;color:#999;margin-bottom:8px">${s.date||''}${+s.visitCount>1?` · ${s.visitCount}回`:''}</div>
+      <div style="display:flex;gap:6px">
+        ${s.url?`<a href="${esc(s.url)}" target="_blank" style="flex:1;padding:6px;border:1px solid #ddd;border-radius:6px;font-size:12px;text-align:center;color:#333;text-decoration:none">🔗</a>`:''}
+        <button onclick="editSpot('${s.id}')" style="flex:1;padding:6px;border:none;border-radius:6px;font-size:12px;background:#c8563a;color:#fff;cursor:pointer">編集</button>
+        <button onclick="shareSpot('${s.id}')" style="flex:1;padding:6px;border:1px solid #ddd;border-radius:6px;font-size:12px;cursor:pointer">共有</button>
+      </div>
+    </div>
+  `});
+  infoWindow.open({ map, anchor: marker });
+}
+
+function fitBounds() {
+  if (!map || !window.google) return;
+  const valid = spots.filter(s => s.lat && s.lng);
+  if (!valid.length) return;
+  if (valid.length === 1) { map.setCenter({ lat: +valid[0].lat, lng: +valid[0].lng }); map.setZoom(14); return; }
+  const bounds = new google.maps.LatLngBounds();
+  valid.forEach(s => bounds.extend({ lat: +s.lat, lng: +s.lng }));
+  map.fitBounds(bounds, 60);
+}
+
+function flyTo(s) {
+  if (!map || !window.google || !s.lat || !s.lng) return;
+  map.panTo({ lat: +s.lat, lng: +s.lng });
+  map.setZoom(16);
+  if (markers[s.id]) showInfoWindow(s, markers[s.id]);
+}
+
+function onMapClick(e) {
+  const lat = e.latLng.lat(), lng = e.latLng.lng();
+  const latEl = document.getElementById('f-lat');
+  const lngEl = document.getElementById('f-lng');
+  const prevEl = document.getElementById('f-loc-set');
+  if (latEl) latEl.value = lat;
+  if (lngEl) lngEl.value = lng;
+  if (prevEl) { prevEl.style.display='flex'; prevEl.textContent=`📍 地図で選択 (${lat.toFixed(4)}, ${lng.toFixed(4)})`; }
+  toast('位置を設定しました');
+}
+
+// バックグラウンドで位置情報を取得
+let geocodingActive = false;
+async function startBackgroundGeocode() {
+  if (geocodingActive || demoMode) return;
+  if (!window.google || !placesGeocoder) return;
+  const needsGeocode = spots.filter(s => !s.lat || !s.lng);
+  if (!needsGeocode.length) return;
+  geocodingActive = true;
+  toast(`📍 ${needsGeocode.length}件の位置情報を取得中…`);
+  let done = 0;
+  for (const spot of needsGeocode) {
+    await new Promise(resolve => {
+      placesGeocoder.findPlaceFromQuery(
+        { query: spot.name, fields: ['geometry'] },
+        async (results, status) => {
+          if (status === 'OK' && results?.[0]?.geometry?.location) {
+            spot.lat = results[0].geometry.location.lat();
+            spot.lng = results[0].geometry.location.lng();
+            try {
+              await gasCall({ action: 'saveSpot', spot: {
+                id: spot.id, name: spot.name, lat: spot.lat, lng: spot.lng,
+                date: spot.date||'', rating: spot.rating||0, url: spot.url||'',
+                memo: spot.memo||'', tags: spot.tags||[], wantAgain: spot.wantAgain||false,
+                visitCount: spot.visitCount||1, photoUrl: spot.photoUrl||'',
+              }});
+            } catch(e) {}
+            addMarker(spot);
+            done++;
+            if (done % 20 === 0) toast(`📍 位置情報取得中… ${done}/${needsGeocode.length}件`);
+          }
+          resolve();
+        }
+      );
+    });
+    await new Promise(r => setTimeout(r, 200));
+  }
+  geocodingActive = false;
+  toast(`✅ ${done}件の位置情報を取得しました！`);
+}
+
+// ===== RENDER ALL =====
+function renderAll() {
+  updateStats();
+  renderMarkers();
+  if (currentTab === 'spots') renderSpotList();
+  else renderPlanList();
+  document.getElementById('hdr-count').textContent = spots.length + '件';
+}
+
+function updateStats() {
+  document.getElementById('s-total').textContent = spots.length;
+  const rated = spots.filter(s => +s.rating > 0);
+  document.getElementById('s-avg').textContent = rated.length ? (rated.reduce((a,b)=>a+(+b.rating),0)/rated.length).toFixed(1) : '—';
+  document.getElementById('s-want').textContent = spots.filter(s => s.wantAgain == 'true' || s.wantAgain === true).length;
+  document.getElementById('s-plans').textContent = plans.length;
+}
+
+// ===== SPOT LIST =====
+function switchTab(tab) {
+  currentTab = tab;
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-' + tab).classList.add('active');
+  if (tab === 'spots') renderSpotList();
+  else renderPlanList();
+}
+
+function renderSpotList() {
+  const ctrl = document.getElementById('list-controls-wrap');
+  const allTags = getAllTags();
+  ctrl.innerHTML = `
+    <div class="list-controls">
+      <div class="search-wrap"><span class="search-icon">🔍</span><input class="search-input" type="text" placeholder="店名・メモで検索…" value="${esc(searchQ)}" oninput="onSearch(this.value)"></div>
+      <div class="filter-row">
+        <span class="pill ${filterStar===0&&!filterWant&&!filterTag?'on':''}" onclick="clearFilters()">すべて</span>
+        ${[5,4,3].map(r=>`<span class="pill ${filterStar===r?'on':''}" onclick="setStarFilter(${r})">★${r}+</span>`).join('')}
+        <span class="pill pill-want ${filterWant?'on':''}" onclick="toggleWantFilter()">💕また行く</span>
+        ${getUsedTags().map(t=>`<span class="pill ${filterTag===t?'on':''}" onclick="setTagFilter('${t}')">${t}</span>`).join('')}
+      </div>
+    </div>
+  `;
+  const filtered = getFilteredSpots();
+  const body = document.getElementById('panel-body');
+  if (!filtered.length) {
+    body.innerHTML = '<div class="empty">📍 スポットがありません<br>「＋ 追加」から登録しよう！</div>';
+    return;
+  }
+  // 最初の30件だけ描画、スクロールで追加ロード
+  const PAGE = 30;
+  let rendered = Math.min(PAGE, filtered.length);
+  body.innerHTML = '<div class="spot-list" id="spot-list-inner">'
+    + filtered.slice(0, rendered).map(spotCardHTML).join('')
+    + '</div>'
+    + (filtered.length > PAGE ? `<div id="load-more" style="text-align:center;padding:14px"><button class="btn" onclick="loadMoreSpots()">さらに表示（残り${filtered.length - rendered}件）</button></div>` : '');
+
+  // loadMoreSpots をクロージャで保持
+  window._filteredSpots = filtered;
+  window._renderedCount = rendered;
+}
+
+function loadMoreSpots() {
+  const PAGE = 30;
+  const filtered = window._filteredSpots || [];
+  const start = window._renderedCount || 0;
+  const next = Math.min(start + PAGE, filtered.length);
+  const list = document.getElementById('spot-list-inner');
+  if (list) {
+    list.innerHTML += filtered.slice(start, next).map(spotCardHTML).join('');
+  }
+  window._renderedCount = next;
+  const btn = document.getElementById('load-more');
+  if (btn) {
+    if (next >= filtered.length) btn.remove();
+    else btn.innerHTML = `<button class="btn" onclick="loadMoreSpots()">さらに表示（残り${filtered.length - next}件）</button>`;
+  }
+}
+
+
+function getFilteredSpots() {
+  return spots.filter(s => {
+    const q = searchQ.toLowerCase();
+    const matchQ = !q || s.name.toLowerCase().includes(q) || (s.memo||'').toLowerCase().includes(q);
+    const matchR = !filterStar || +s.rating >= filterStar;
+    const matchW = !filterWant || s.wantAgain == 'true' || s.wantAgain === true;
+    const tags = Array.isArray(s.tags) ? s.tags : [];
+    const matchT = !filterTag || tags.includes(filterTag);
+    return matchQ && matchR && matchW && matchT;
+  }).sort((a,b) => new Date(b.updated||b.created||0) - new Date(a.updated||a.created||0));
+}
+
+function spotCardHTML(s) {
+  const stars = '★'.repeat(+s.rating||0) + '☆'.repeat(5-(+s.rating||0));
+  const tags = Array.isArray(s.tags) ? s.tags : [];
+  const wantAgain = s.wantAgain == 'true' || s.wantAgain === true;
+  return `<div class="spot-card" id="card-${s.id}" onclick="flyTo(${JSON.stringify(s).replace(/"/g,'&quot;')})">
+    <div class="spot-card-top">
+      <div class="spot-card-left">
+        <div class="spot-name">${esc(s.name)}</div>
+        <div class="spot-row2">
+          <span class="stars-disp">${stars}</span>
+          ${s.date ? `<span class="spot-date">${s.date}</span>` : ''}
+          ${s.visitCount > 1 ? `<span class="spot-visits">${s.visitCount}回</span>` : ''}
+          ${wantAgain ? `<span class="want-badge">💕また行く</span>` : ''}
+        </div>
+        ${tags.length ? `<div class="spot-tags-row">${tags.map(t=>`<span class="spot-tag">${t}</span>`).join('')}</div>` : ''}
+        ${s.memo ? `<div class="spot-memo">${esc(s.memo)}</div>` : ''}
+      </div>
+      ${s.photoUrl ? `<img class="spot-thumb" src="${esc(s.photoUrl)}" onerror="this.style.display='none'" loading="lazy">` : ''}
+    </div>
+    <div class="spot-actions">
+      ${s.url ? `<a href="${esc(s.url)}" target="_blank" class="spot-link" onclick="event.stopPropagation()">🔗 リンク</a>` : ''}
+      <button class="btn btn-xs visit-btn" onclick="event.stopPropagation();addVisit('${s.id}')">+訪問</button>
+      <button class="btn btn-xs" onclick="event.stopPropagation();editSpot('${s.id}')">編集</button>
+      <button class="btn btn-xs" onclick="event.stopPropagation();shareSpot('${s.id}')">共有</button>
+      <button class="btn btn-xs btn-danger" onclick="event.stopPropagation();deleteSpot('${s.id}')">削除</button>
+    </div>
+  </div>`;
+}
+
+function renderPlanList() {
+  document.getElementById('list-controls-wrap').innerHTML = '';
+  const body = document.getElementById('panel-body');
+  if (!plans.length) {
+    body.innerHTML = '<div class="empty">📋 プランがありません<br>「行きたい」から追加しよう！</div>';
+    return;
+  }
+  body.innerHTML = '<div class="spot-list">' + plans.map(planCardHTML).join('') + '</div>';
+}
+
+function planCardHTML(p) {
+  const tags = Array.isArray(p.tags) ? p.tags : [];
+  return `<div class="plan-card">
+    <div class="plan-name">${esc(p.name)}</div>
+    ${tags.length ? `<div class="spot-tags-row">${tags.map(t=>`<span class="spot-tag">${t}</span>`).join('')}</div>` : ''}
+    ${p.memo ? `<div class="plan-memo">${esc(p.memo)}</div>` : ''}
+    <div class="plan-actions">
+      <button class="btn btn-xs btn-green" onclick="promotePlan('${p.id}')">✅ 行った！</button>
+      <button class="btn btn-xs" onclick="editPlan('${p.id}')">編集</button>
+      <button class="btn btn-xs btn-danger" onclick="deletePlan('${p.id}')">削除</button>
+    </div>
+  </div>`;
+}
+
+function highlightCard(id) {
+  document.querySelectorAll('.spot-card').forEach(c => c.classList.remove('selected'));
+  const card = document.getElementById('card-' + id);
+  if (card) { card.classList.add('selected'); card.scrollIntoView({ behavior:'smooth', block:'nearest' }); }
+}
+
+// ===== SPOT FORM =====
+function openSpotModal(id) {
+  editSpotId = id || null;
+  const s = id ? spots.find(x => x.id == id) : null;
+  editStars = s ? (+s.rating||0) : 0;
+  editTags = s ? (Array.isArray(s.tags) ? [...s.tags] : []) : [];
+  editWantAgain = s ? (s.wantAgain == 'true' || s.wantAgain === true) : false;
+  editPhotoDataUrl = null;
+  pendingLat = s?.lat || null; pendingLng = s?.lng || null;
+
+  document.getElementById('spot-modal-title').textContent = s ? 'お店を編集' : 'お店を追加';
+  document.getElementById('spot-modal-body').innerHTML = buildSpotForm(s);
+  document.getElementById('spot-modal').classList.add('open');
+}
+function editSpot(id) { openSpotModal(id); }
+
+function buildSpotForm(s) {
+  const allTags = [...new Set([...DEFAULT_TAGS, ...customTags])];
+  return `
+    <div class="fg loc-wrap">
+      <label>店名・場所 <span class="required">*</span></label>
+      <input type="text" id="f-name" value="${esc(s?.name||'')}" placeholder="例: 軽井沢キッチン" oninput="onLocInput(this.value)" autocomplete="off">
+      <div id="loc-results" class="loc-results" style="display:none"></div>
+      <div class="loc-set" id="f-loc-set" style="${(s?.lat||pendingLat)?'':'display:none'}">
+        📍 ${s?.name ? esc(s.name) : '地図で選択'} (${s?.lat ? (+s.lat).toFixed(4)+', '+(+s.lng).toFixed(4) : ''})
+      </div>
+      <input type="hidden" id="f-lat" value="${s?.lat||pendingLat||''}">
+      <input type="hidden" id="f-lng" value="${s?.lng||pendingLng||''}">
+      <div style="font-size:11px;color:var(--text2);margin-top:5px">💡 地図をタップして位置を指定することもできます</div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="fg">
+        <label>日付</label>
+        <input type="date" id="f-date" value="${s?.date||today()}">
+      </div>
+      <div class="fg">
+        <label>訪問回数</label>
+        <input type="number" id="f-visits" value="${s?.visitCount||1}" min="1" max="99">
+      </div>
+    </div>
+    <div class="fg">
+      <label>評価</label>
+      <div class="stars-input" id="f-stars">
+        ${[1,2,3,4,5].map(i=>`<button class="star-btn ${i<=editStars?'on':''}" onclick="setStar(${i})" data-v="${i}" type="button">★</button>`).join('')}
+      </div>
+    </div>
+    <div class="fg">
+      <label>カテゴリタグ</label>
+      <div class="tags-wrap" id="f-tags-wrap">
+        ${allTags.map(t=>`<span class="tag ${editTags.includes(t)?'on':''}" onclick="toggleTag('${t}')">${t}</span>`).join('')}
+      </div>
+      <div class="tag-add-row">
+        <input type="text" id="f-new-tag" placeholder="タグを追加" style="height:32px;font-size:13px">
+        <button class="btn btn-xs" onclick="addCustomTag()" type="button">追加</button>
+      </div>
+    </div>
+    <div class="toggle-row fg">
+      <div class="toggle-label">💕 また行きたい</div>
+      <label class="toggle"><input type="checkbox" id="f-want" ${editWantAgain?'checked':''}><span class="toggle-slider"></span></label>
+    </div>
+    <div class="fg">
+      <label>URL（食べログ・ぐるなびなど）</label>
+      <input type="url" id="f-url" value="${esc(s?.url||'')}" placeholder="https://...">
+    </div>
+    <div class="fg">
+      <label>メモ</label>
+      <textarea id="f-memo" placeholder="感想・おすすめメニューなど">${esc(s?.memo||'')}</textarea>
+    </div>
+    <div class="fg">
+      <label>写真</label>
+      <div class="photo-area" onclick="triggerPhotoUpload()" id="f-photo-area">
+        ${s?.photoUrl ? `<img src="${esc(s.photoUrl)}" id="f-photo-preview"><button class="remove-photo" onclick="event.stopPropagation();removePhoto()" type="button">×</button>` : '<div style="font-size:28px;margin-bottom:6px">📷</div><div>タップして写真を選択</div>'}
+      </div>
+      <input type="file" id="f-photo-file" accept="image/*" style="display:none" onchange="onPhotoSelect(event)">
+    </div>
+  `;
+}
+
+async function saveSpot() {
+  const name = document.getElementById('f-name')?.value?.trim();
+  if (!name) { toast('店名を入力してください'); return; }
+  const lat = document.getElementById('f-lat')?.value;
+  const lng = document.getElementById('f-lng')?.value;
+  const spot = {
+    id: editSpotId || null,
+    name,
+    lat: lat ? +lat : null,
+    lng: lng ? +lng : null,
+    date: document.getElementById('f-date')?.value || '',
+    rating: editStars,
+    url: document.getElementById('f-url')?.value?.trim() || '',
+    memo: document.getElementById('f-memo')?.value?.trim() || '',
+    tags: editTags,
+    wantAgain: document.getElementById('f-want')?.checked || false,
+    visitCount: +document.getElementById('f-visits')?.value || 1,
+    photoUrl: editSpotId ? (spots.find(s=>s.id==editSpotId)?.photoUrl||'') : '',
+  };
+
+  closeModal('spot-modal');
+  toast('保存中…');
+
+  if (demoMode) {
+    if (editSpotId) {
+      const idx = spots.findIndex(s => s.id == editSpotId);
+      if (idx >= 0) spots[idx] = { ...spots[idx], ...spot };
+    } else {
+      spot.id = genId(); spots.push(spot);
+    }
+    editStars = 0; editTags = []; editSpotId = null;
+    renderAll(); toast('保存しました！'); return;
+  }
+
+  const res = await gasCall({ action: 'saveSpot', spot });
+  if (res.status === 'ok') {
+    if (!editSpotId) { spot.id = res.data.id; spots.push(spot); }
+    else { const idx = spots.findIndex(s => s.id == editSpotId); if (idx>=0) spots[idx] = { ...spots[idx], ...spot }; }
+
+    // 写真アップロード
+    if (editPhotoDataUrl && res.data?.id) {
+      const pRes = await gasCall({ action: 'uploadPhoto', id: res.data.id||spot.id, dataUrl: editPhotoDataUrl, filename: name+'.jpg' });
+      if (pRes.status === 'ok') {
+        const id = res.data.id || spot.id;
+        const idx = spots.findIndex(s => s.id == id);
+        if (idx >= 0) spots[idx].photoUrl = pRes.data.url;
+      }
+    }
+    editStars = 0; editTags = []; editSpotId = null; editPhotoDataUrl = null;
+    renderAll(); toast('保存しました！');
+  } else { toast('保存エラー：' + (res.message||'')); }
+}
+
+async function deleteSpot(id) {
+  if (!confirm('このお店を削除しますか？')) return;
+  if (demoMode) { spots = spots.filter(s=>s.id!=id); renderAll(); return; }
+  const res = await gasCall({ action: 'deleteSpot', id });
+  if (res.status === 'ok') {
+    spots = spots.filter(s => s.id != id);
+    if (markers[id]) { markers[id].setMap(null); delete markers[id]; }
+    renderAll(); toast('削除しました');
+  }
+}
+
+async function addVisit(id) {
+  if (demoMode) {
+    const idx = spots.findIndex(s => s.id == id);
+    if (idx >= 0) spots[idx].visitCount = (+spots[idx].visitCount||1) + 1;
+    renderAll(); toast('訪問回数を追加しました'); return;
+  }
+  const res = await gasCall({ action: 'addVisit', id });
+  if (res.status === 'ok') {
+    const idx = spots.findIndex(s => s.id == id);
+    if (idx >= 0) spots[idx].visitCount = res.data.visitCount;
+    renderAll(); toast('訪問回数を追加しました (' + res.data.visitCount + '回)');
+  }
+}
+
+// ===== PLAN FORM =====
+function openPlanModal(id) {
+  editPlanId = id || null;
+  const p = id ? plans.find(x => x.id == id) : null;
+  editTags = p ? (Array.isArray(p.tags) ? [...p.tags] : []) : [];
+  document.getElementById('plan-modal-title').textContent = p ? 'プランを編集' : '行きたいリストに追加';
+  document.getElementById('plan-modal-body').innerHTML = buildPlanForm(p);
+  document.getElementById('plan-modal').classList.add('open');
+}
+function editPlan(id) { openPlanModal(id); }
+
+function buildPlanForm(p) {
+  const allTags = [...new Set([...DEFAULT_TAGS, ...customTags])];
+  return `
+    <div class="fg loc-wrap">
+      <label>店名・場所 <span class="required">*</span></label>
+      <input type="text" id="pf-name" value="${esc(p?.name||'')}" placeholder="例: 話題のパスタ屋さん" oninput="onLocInput(this.value,'pf')" autocomplete="off">
+      <div id="loc-results" class="loc-results" style="display:none"></div>
+      <input type="hidden" id="pf-lat" value="${p?.lat||''}">
+      <input type="hidden" id="pf-lng" value="${p?.lng||''}">
+    </div>
+    <div class="fg">
+      <label>カテゴリタグ</label>
+      <div class="tags-wrap" id="f-tags-wrap">
+        ${allTags.map(t=>`<span class="tag ${editTags.includes(t)?'on':''}" onclick="toggleTag('${t}')">${t}</span>`).join('')}
+      </div>
+    </div>
+    <div class="fg">
+      <label>優先度</label>
+      <select id="pf-priority">
+        <option value="3" ${p?.priority==3?'selected':''}>🔴 高</option>
+        <option value="2" ${!p?.priority||p?.priority==2?'selected':''}>🟡 中</option>
+        <option value="1" ${p?.priority==1?'selected':''}>🟢 低</option>
+      </select>
+    </div>
+    <div class="fg">
+      <label>メモ</label>
+      <textarea id="pf-memo" placeholder="どんなお店？行きたい理由など">${esc(p?.memo||'')}</textarea>
+    </div>
+  `;
+}
+
+async function savePlan() {
+  const name = document.getElementById('pf-name')?.value?.trim();
+  if (!name) { toast('店名を入力してください'); return; }
+  const plan = {
+    id: editPlanId || null,
+    name,
+    lat: document.getElementById('pf-lat')?.value || '',
+    lng: document.getElementById('pf-lng')?.value || '',
+    memo: document.getElementById('pf-memo')?.value?.trim() || '',
+    tags: editTags,
+    priority: document.getElementById('pf-priority')?.value || 2,
+  };
+  closeModal('plan-modal');
+  if (demoMode) {
+    if (editPlanId) { const i = plans.findIndex(p=>p.id==editPlanId); if(i>=0) plans[i]={...plans[i],...plan}; }
+    else { plan.id = genId(); plans.push(plan); }
+    editTags=[]; editPlanId=null; renderAll(); toast('プランを保存しました'); return;
+  }
+  const res = await gasCall({ action: 'savePlan', plan });
+  if (res.status === 'ok') {
+    if (editPlanId) { const i=plans.findIndex(p=>p.id==editPlanId); if(i>=0) plans[i]={...plans[i],...plan}; }
+    else { plan.id = res.data.id; plans.push(plan); }
+    editTags=[]; editPlanId=null; renderAll(); toast('プランを保存しました');
+  }
+}
+
+async function deletePlan(id) {
+  if (!confirm('プランを削除しますか？')) return;
+  if (demoMode) { plans = plans.filter(p=>p.id!=id); renderAll(); return; }
+  const res = await gasCall({ action: 'deletePlan', id });
+  if (res.status === 'ok') { plans = plans.filter(p => p.id != id); renderAll(); toast('削除しました'); }
+}
+
+async function promotePlan(id) {
+  if (!confirm('「行った！」として記録し、プランから移動しますか？\n（評価・日付は後から編集できます）')) return;
+  if (demoMode) {
+    const p = plans.find(x=>x.id==id);
+    if (p) { spots.push({...p, id:genId(), date:today(), rating:0, url:'', wantAgain:false, visitCount:1, photoUrl:''}); }
+    plans = plans.filter(x=>x.id!=id); renderAll(); switchTab('spots'); toast('スポットに追加しました！'); return;
+  }
+  const res = await gasCall({ action: 'promotePlan', id });
+  if (res.status === 'ok') {
+    await fetchAll();
+    switchTab('spots'); toast('スポットに追加しました！');
+  }
+}
+
+// ===== SHARE =====
+function shareSpot(id) {
+  const s = spots.find(x => x.id == id);
+  if (!s) return;
+  const params = new URLSearchParams({
+    share: '1', name: s.name, lat: s.lat||'', lng: s.lng||'',
+    rating: s.rating||0, memo: s.memo||'', date: s.date||'', tags: (s.tags||[]).join(',')
+  });
+  const url = location.href.split('?')[0] + '?' + params.toString();
+  document.getElementById('share-url-text').textContent = url;
+  document.getElementById('share-modal').classList.add('open');
+}
+
+function copyShareUrl() {
+  const text = document.getElementById('share-url-text').textContent;
+  navigator.clipboard.writeText(text).then(() => toast('URLをコピーしました！'));
+}
+
+function handleShareLink(params) {
+  document.getElementById('setup-screen').style.display = 'none';
+  document.body.innerHTML = `<div style="max-width:400px;margin:40px auto;padding:24px;font-family:sans-serif">
+    <h2 style="color:#c8563a;margin-bottom:16px">🍽 共有されたスポット</h2>
+    <div style="background:#fff;border:1px solid #eee;border-radius:12px;padding:16px">
+      <div style="font-size:18px;font-weight:700;margin-bottom:8px">${esc(params.get('name'))}</div>
+      <div style="color:#e6a817;font-size:16px">${'★'.repeat(+params.get('rating')||0)}</div>
+      ${params.get('tags') ? `<div style="margin-top:8px">${params.get('tags').split(',').map(t=>`<span style="background:#f3f1ec;padding:2px 10px;border-radius:100px;font-size:12px;margin-right:4px">${esc(t)}</span>`).join('')}</div>` : ''}
+      ${params.get('memo') ? `<div style="margin-top:10px;font-size:14px;color:#555">${esc(params.get('memo'))}</div>` : ''}
+      ${params.get('date') ? `<div style="margin-top:6px;font-size:12px;color:#999">${params.get('date')}</div>` : ''}
+      ${params.get('lat') && params.get('lng') ? `<a href="https://maps.google.com/?q=${params.get('lat')},${params.get('lng')}" target="_blank" style="display:inline-block;margin-top:12px;padding:8px 18px;background:#c8563a;color:#fff;border-radius:8px;text-decoration:none;font-size:13px">📍 Googleマップで開く</a>` : ''}
+    </div>
+  </div>`;
+}
+
+// ===== SETTINGS =====
+function openSettings() {
+  document.getElementById('cfg-api').value = cfg?.apiKey || '';
+  document.getElementById('cfg-gas').value = cfg?.gasUrl || '';
+  document.getElementById('settings-modal').classList.add('open');
+}
+function applySettings() {
+  cfg = { apiKey: document.getElementById('cfg-api').value.trim(), gasUrl: document.getElementById('cfg-gas').value.trim() };
+  localStorage.setItem(LS_CFG, JSON.stringify(cfg));
+  closeModal('settings-modal'); toast('設定を保存しました。リロードすると反映されます。');
+}
+function resetSettings() {
+  if (confirm('設定をリセットして初期画面に戻りますか？')) {
+    localStorage.removeItem(LS_CFG); location.reload();
+  }
+}
+
+// ===== LOCATION SEARCH =====
+let locTimer = null, locPrefix = 'f';
+function onLocInput(v, prefix) {
+  locPrefix = prefix || 'f';
+  clearTimeout(locTimer);
+  if (v.length < 2) { hideLocResults(); return; }
+  locTimer = setTimeout(() => geocode(v), 500);
+}
+async function geocode(q) {
+  try {
+    if (placesAutocomplete) {
+      placesAutocomplete.getPlacePredictions({ input: q, language: 'ja' }, (preds) => {
+        showLocResults(preds ? preds.slice(0,5).map(p => ({
+          name: p.structured_formatting.main_text,
+          addr: p.structured_formatting.secondary_text,
+          placeId: p.place_id,
+        })) : []);
+      });
+    } else {
+      const r = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&limit=5&accept-language=ja`);
+      const data = await r.json();
+      showLocResults(data.map(d => ({ name: d.display_name.split(',')[0], addr: d.display_name, lat: +d.lat, lng: +d.lon })));
+    }
+  } catch(e) {}
+}
+function showLocResults(items) {
+  const el = document.getElementById('loc-results');
+  if (!el || !items.length) { hideLocResults(); return; }
+  el.style.display = 'block';
+  el.innerHTML = items.map((item, i) => `
+    <div class="loc-item" onclick="selectLoc(${i})">
+      <div class="loc-item-name">${esc(item.name)}</div>
+      <div class="loc-item-addr">${esc(item.addr||'')}</div>
+    </div>
+  `).join('');
+  el._items = items;
+}
+function selectLoc(i) {
+  const el = document.getElementById('loc-results');
+  const item = el._items[i];
+  if (!item) return;
+  hideLocResults();
+  if (item.placeId && placesGeocoder) {
+    placesGeocoder.getDetails({ placeId: item.placeId, fields: ['geometry','name'] }, (place) => {
+      if (place?.geometry?.location) {
+        const lat = place.geometry.location.lat(), lng = place.geometry.location.lng();
+        setLocResult(lat, lng, item.name);
+      }
+    });
+  } else if (item.lat) {
+    setLocResult(item.lat, item.lng, item.name);
+  }
+}
+function setLocResult(lat, lng, name) {
+  const latEl = document.getElementById(locPrefix + '-lat');
+  const lngEl = document.getElementById(locPrefix + '-lng');
+  const prevEl = document.getElementById(locPrefix + '-loc-set');
+  if (latEl) latEl.value = lat;
+  if (lngEl) lngEl.value = lng;
+  if (prevEl) { prevEl.style.display = 'flex'; prevEl.textContent = `📍 ${name} (${(+lat).toFixed(4)}, ${(+lng).toFixed(4)})`; }
+  if (map) { map.panTo({ lat: +lat, lng: +lng }); map.setZoom(16); }
+}
+function hideLocResults() {
+  const el = document.getElementById('loc-results');
+  if (el) el.style.display = 'none';
+}
+
+// ===== TAGS =====
+function toggleTag(t) {
+  if (editTags.includes(t)) editTags = editTags.filter(x=>x!==t);
+  else editTags.push(t);
+  document.querySelectorAll('#f-tags-wrap .tag').forEach(el => {
+    el.classList.toggle('on', editTags.includes(el.textContent));
+  });
+}
+function addCustomTag() {
+  const val = document.getElementById('f-new-tag')?.value?.trim();
+  if (!val) return;
+  customTags = [...new Set([...customTags, val])];
+  localStorage.setItem(LS_TAGS, JSON.stringify(customTags));
+  editTags.push(val);
+  document.getElementById('f-new-tag').value = '';
+  // re-render tags section
+  const wrap = document.getElementById('f-tags-wrap');
+  if (wrap) {
+    const allTags = [...new Set([...DEFAULT_TAGS, ...customTags])];
+    wrap.innerHTML = allTags.map(t=>`<span class="tag ${editTags.includes(t)?'on':''}" onclick="toggleTag('${t}')">${t}</span>`).join('');
+  }
+}
+// 実際にスポットで使われているタグだけ返す
+function getUsedTags() {
+  const tagCount = {};
+  spots.forEach(s => {
+    const tags = Array.isArray(s.tags) ? s.tags : [];
+    tags.forEach(t => { tagCount[t] = (tagCount[t] || 0) + 1; });
+  });
+  // 件数の多い順に並べて返す
+  return Object.entries(tagCount)
+    .sort((a, b) => b[1] - a[1])
+    .map(([tag]) => tag);
+}
+
+function getAllTags() {
+  const fromSpots = spots.flatMap(s => Array.isArray(s.tags) ? s.tags : []);
+  return [...new Set([...DEFAULT_TAGS, ...customTags, ...fromSpots])];
+}
+
+// ===== STARS =====
+function setStar(v) {
+  editStars = v;
+  document.querySelectorAll('#f-stars .star-btn').forEach(s => s.classList.toggle('on', +s.dataset.v <= v));
+}
+
+// ===== PHOTO =====
+function triggerPhotoUpload() {
+  if (!document.getElementById('f-photo-preview')) document.getElementById('f-photo-file').click();
+}
+function onPhotoSelect(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    editPhotoDataUrl = ev.target.result;
+    const area = document.getElementById('f-photo-area');
+    area.innerHTML = `<img src="${editPhotoDataUrl}" id="f-photo-preview"><button class="remove-photo" onclick="event.stopPropagation();removePhoto()" type="button">×</button>`;
+  };
+  reader.readAsDataURL(file);
+}
+function removePhoto() {
+  editPhotoDataUrl = null;
+  document.getElementById('f-photo-area').innerHTML = '<div style="font-size:28px;margin-bottom:6px">📷</div><div>タップして写真を選択</div>';
+}
+
+// ===== FILTERS =====
+function onSearch(v) { searchQ = v; renderSpotList(); }
+function setStarFilter(r) { filterStar = filterStar===r ? 0 : r; renderSpotList(); }
+function toggleWantFilter() { filterWant = !filterWant; renderSpotList(); }
+function setTagFilter(t) { filterTag = filterTag===t ? '' : t; renderSpotList(); }
+function clearFilters() { filterStar=0; filterWant=false; filterTag=''; searchQ=''; renderSpotList(); }
+
+// ===== MODAL =====
+function closeModal(id) { document.getElementById(id).classList.remove('open'); }
+document.querySelectorAll('.overlay').forEach(el => el.addEventListener('click', function(e) { if (e.target===this) this.classList.remove('open'); }));
+
+// ===== UTILS =====
+function esc(s) { return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function genId() { return Date.now().toString(36)+Math.random().toString(36).slice(2,5); }
+function today() { return new Date().toISOString().slice(0,10); }
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+// ===== TIMELINE IMPORT =====
+
+// Googleマップタイムラインで飲食店と判定するキーワード
+const FOOD_PLACE_TYPES = [
+  'restaurant','food','cafe','bar','bakery','meal_takeaway','meal_delivery',
+  'night_club','liquor_store','grocery_or_supermarket','supermarket',
+  // 日本語キーワード（placeTypeやカテゴリ名に含まれる場合）
+  'レストラン','飲食','カフェ','ラーメン','寿司','焼肉','居酒屋','バー','ベーカリー',
+  'パン','ピザ','イタリアン','フレンチ','中華','定食','うどん','そば','カレー',
+  'ファミレス','ファストフード','スイーツ','ケーキ','コーヒー','ビール','izakaya',
+  'ramen','sushi','tempura','tonkatsu','yakiniku','yakitori','soba','udon',
+];
+
+let importCandidates = []; // プレビュー用データ
+
+function openImportModal() {
+  document.getElementById('import-modal').classList.add('open');
+}
+
+function onImportDrop(e) {
+  e.preventDefault();
+  e.currentTarget.style.borderColor = '';
+  e.currentTarget.style.background = '';
+  const file = e.dataTransfer.files[0];
+  if (file) processImportFile(file);
+}
+
+function onImportFileSelect(e) {
+  if (e.target.files[0]) processImportFile(e.target.files[0]);
+}
+
+function processImportFile(file) {
+  toast('ファイルを読み込み中…');
+  const reader = new FileReader();
+
+  // CSVファイルの場合
+  if (file.name.endsWith('.csv')) {
+    reader.onload = ev => {
+      try {
+        importCandidates = parseFavoriteCSV(ev.target.result);
+        if (!importCandidates.length) {
+          toast('場所データが見つかりませんでした。');
+          return;
+        }
+        closeModal('import-modal');
+        showImportPreview(importCandidates);
+      } catch(err) {
+        console.error(err);
+        toast('CSVの読み込みに失敗しました。');
+      }
+    };
+    reader.readAsText(file, 'utf-8');
+    return;
+  }
+
+  // JSONファイルの場合
+  reader.onload = ev => {
+    try {
+      setTimeout(() => {
+        try {
+          const data = JSON.parse(ev.target.result);
+          ev.target.result = null;
+          if (data.type === 'FeatureCollection' && data.features) {
+            importCandidates = parseFeatureCollection(data);
+          } else {
+            importCandidates = parseTimelineData(data);
+            data.semanticSegments = null;
+            data.timelineObjects = null;
+          }
+          if (!importCandidates.length) {
+            toast('場所データが見つかりませんでした。');
+            return;
+          }
+          closeModal('import-modal');
+          showImportPreview(importCandidates);
+        } catch(err) {
+          console.error(err);
+          toast('読み込みに失敗しました。');
+        }
+      }, 50);
+    } catch(err) {
+      toast('ファイルの読み込みに失敗しました。');
+    }
+  };
+  reader.readAsText(file, 'utf-8');
+}
+
+// お気に入りの場所.csv（タイトル,メモ,URL,タグ,コメント形式）をパース
+function parseFavoriteCSV(text) {
+  const lines = text.split('\n').filter(l => l.trim());
+  if (lines.length <= 1) return [];
+  const results = [];
+  for (const line of lines.slice(1)) {
+    const cols = parseCSVLine(line);
+    const name = (cols[0] || '').trim();
+    const memo = (cols[1] || '').trim();
+    const url  = (cols[2] || '').trim();
+    if (!name) continue;
+
+    const placeId = extractPlaceId(url);
+    const isFood = isFoodPlace(name, '', memo);
+
+    // 飲食店と判定されたものに自動でタグを付ける
+    const tags = isFood ? ['飲食店'] : [];
+
+    results.push({
+      id: genId(),
+      name, memo, url,
+      lat: null, lng: null,
+      date: '', placeId,
+      placeType: '', rawType: '',
+      isFood,
+      checked: true,
+      tags,
+      wantAgain: false, visitCount: 1, photoUrl: '', rating: 0,
+      needsGeocode: !!placeId,
+    });
+  }
+  return results;
+}
+
+function parseCSVLine(line) {
+  const result = [];
+  let current = '';
+  let inQuotes = false;
+  for (let i = 0; i < line.length; i++) {
+    const ch = line[i];
+    if (ch === '"') { inQuotes = !inQuotes; }
+    else if (ch === ',' && !inQuotes) { result.push(current); current = ''; }
+    else { current += ch; }
+  }
+  result.push(current);
+  return result;
+}
+
+function extractPlaceId(url) {
+  if (!url) return '';
+  // !1s0x...:0x... 形式を抽出
+  const m = url.match(/!1s(0x[0-9a-fA-F]+:[0-9a-fA-F]+)/);
+  if (m) return m[1];
+  // cid= 形式
+  const cid = url.match(/[?&]cid=(\d+)/);
+  if (cid) return cid[1];
+  return '';
+}
+
+function parseFeatureCollection(data) {
+  const results = [];
+  for (const f of data.features) {
+    const coords = f.geometry?.coordinates;
+    const props = f.properties || {};
+    const loc = props.location || {};
+    const lng = coords?.[0] || null;
+    const lat = coords?.[1] || null;
+    if (!lat || !lng) continue;
+    const name = loc.name || '';
+    if (!name) continue;
+    const date = props.date ? props.date.slice(0, 10) : '';
+    const url = props.google_maps_url || '';
+    const address = loc.address || '';
+    results.push({
+      id: genId(),
+      name, lat, lng, date, url,
+      memo: address,
+      placeType: '', rawType: '',
+      isFood: isFoodPlace(name, '', address),
+      checked: true, // お気に入りは全件チェック済み
+      tags: [], wantAgain: false, visitCount: 1, photoUrl: '', rating: 0,
+    });
+  }
+  return results;
+}
+
+function parseLatLng(str) {
+  if (!str) return { lat: null, lng: null };
+  const m = str.match(/([-\d.]+)°[^,]*,\s*([-\d.]+)°/);
+  if (m) return { lat: +m[1], lng: +m[2] };
+  return { lat: null, lng: null };
+}
+
+function parseTimelineData(data) {
+  const results = [];
+
+  // --- 形式1: semanticSegments（新形式・先生のファイル）---
+  const segs = data.semanticSegments || [];
+  for (const seg of segs) {
+    const startTime = seg.startTime || '';
+    const date = startTime ? startTime.slice(0, 10) : '';
+
+    let lat = null, lng = null, placeName = '', placeType = '', placeId = '', semanticType = '';
+
+    // visitがある（滞在記録）場合のみ処理
+    const visit = seg.visit;
+    if (visit && visit.topCandidate) {
+      const c = visit.topCandidate;
+      const loc = c.placeLocation || {};
+      const parsed = parseLatLng(loc.latLng || c.latLng || '');
+      lat = parsed.lat; lng = parsed.lng;
+      placeName = loc.name || c.name || loc.address || '';
+      placeType = (c.placeType || '').toLowerCase();
+      placeId = loc.placeId || c.placeId || '';
+      semanticType = c.semanticType || '';
+    }
+
+    // latLngがなければtimelinePathの中間点を使う
+    if ((!lat || !lng) && Array.isArray(seg.timelinePath) && seg.timelinePath.length > 0) {
+      const mid = seg.timelinePath[Math.floor(seg.timelinePath.length / 2)];
+      const parsed = parseLatLng(mid?.point || '');
+      if (parsed.lat) { lat = parsed.lat; lng = parsed.lng; }
+    }
+
+    // visitがない（移動記録）はスキップ
+    if (!visit) continue;
+
+    // 位置情報がなければスキップ
+    if (!lat || !lng) continue;
+
+    // 店名がなければplaceIdを使う、それもなければ「不明な場所」
+    if (!placeName && placeId) placeName = '不明な場所(' + placeId.slice(0, 6) + ')';
+    if (!placeName) placeName = '不明な場所';
+
+    const isFood = isFoodPlace(placeName, placeType, semanticType);
+
+    results.push({
+      id: genId(),
+      name: placeName,
+      lat, lng, date,
+      placeType, placeId,
+      rawType: placeType || semanticType || '',
+      isFood,
+      checked: isFood,
+      rating: 0, url: '', memo: '', tags: [], wantAgain: false, visitCount: 1, photoUrl: '',
+    });
+  }
+
+  // --- 形式2: timelineObjects（旧形式）---
+  const objs = data.timelineObjects || [];
+  for (const obj of objs) {
+    const visit = obj.placeVisit;
+    if (!visit) continue;
+    const loc = visit.location || {};
+    const placeName = loc.name || '';
+    if (!placeName) continue;
+    const lat = loc.latitudeE7 ? loc.latitudeE7 / 1e7 : null;
+    const lng = loc.longitudeE7 ? loc.longitudeE7 / 1e7 : null;
+    if (!lat || !lng) continue;
+    const placeType = (loc.placeVisitType || '').toLowerCase();
+    const isFood = isFoodPlace(placeName, placeType, '');
+    const startTime = visit.duration?.startTimestamp || '';
+    const date = startTime ? startTime.slice(0, 10) : '';
+    results.push({
+      id: genId(), name: placeName, lat, lng, date,
+      placeType, placeId: loc.placeId || '',
+      rawType: loc.placeVisitType || '',
+      isFood, checked: isFood,
+      rating: 0, url: '', memo: '', tags: [], wantAgain: false, visitCount: 1, photoUrl: '',
+    });
+  }
+
+  // 重複除去（同じ緯度経度・日付）
+  const seen = new Set();
+  return results.filter(r => {
+    const key = (r.lat?.toFixed(3)||'') + '|' + (r.lng?.toFixed(3)||'') + '|' + r.date;
+    if (seen.has(key)) return false;
+    seen.add(key); return true;
+  });
+}
+
+async function enrichWithPlacesAPI(candidates) {} // 未使用
+
+function isFoodPlace(name, placeType, semanticType) {
+  const target = (name + ' ' + placeType + ' ' + semanticType).toLowerCase();
+  return FOOD_PLACE_TYPES.some(kw => target.includes(kw.toLowerCase()));
+}
+
+function showImportPreview(candidates) {
+  let filterMode = 'food'; // 'food' | 'all'
+
+  function render() {
+    const list = filterMode === 'food'
+      ? candidates.filter(c => c.isFood)
+      : candidates;
+
+    const checkedCount = list.filter(c => c.checked).length;
+    document.getElementById('import-preview-title').textContent = `インポート内容を確認（${candidates.length}件検出）`;
+    document.getElementById('import-count-label').textContent =
+      `${checkedCount}件が選択中 / 表示中 ${list.length}件`;
+
+    document.getElementById('import-filter-bar').innerHTML = `
+      <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap">
+        <span class="pill ${filterMode==='food'?'on':''}" onclick="setImportFilter('food')">🍽 飲食店のみ（推奨）</span>
+        <span class="pill ${filterMode==='all'?'on':''}" onclick="setImportFilter('all')">📍 全件表示</span>
+        <button class="btn btn-xs" onclick="checkAllImport(true)" style="margin-left:auto">全選択</button>
+        <button class="btn btn-xs" onclick="checkAllImport(false)">全解除</button>
+      </div>
+    `;
+
+    document.getElementById('import-preview-list').innerHTML = list.length
+      ? list.map((c, i) => `
+        <div style="display:flex;align-items:flex-start;gap:10px;padding:10px 12px;background:var(--surface);border:1px solid ${c.checked?'var(--accent)':'var(--border)'};border-radius:var(--r-sm);cursor:pointer" onclick="toggleImportCheck('${c.id}')">
+          <div style="width:20px;height:20px;border-radius:4px;border:2px solid ${c.checked?'var(--accent)':'var(--border)'};background:${c.checked?'var(--accent)':'transparent'};flex-shrink:0;margin-top:1px;display:flex;align-items:center;justify-content:center;color:#fff;font-size:13px">${c.checked?'✓':''}</div>
+          <div style="flex:1;min-width:0">
+            <div style="font-size:13px;font-weight:700">${esc(c.name)}</div>
+            <div style="font-size:11px;color:var(--text2);margin-top:2px;display:flex;gap:8px;flex-wrap:wrap">
+              ${c.date ? `<span>📅 ${c.date}</span>` : ''}
+              ${c.rawType ? `<span style="background:${c.isFood?'#fde8e2':'var(--surface2)'};color:${c.isFood?'var(--accent)':'var(--text2)'};padding:1px 7px;border-radius:100px">${esc(c.rawType)}</span>` : ''}
+              ${!c.lat ? `<span style="color:#e53935">⚠ 位置情報なし</span>` : ''}
+            </div>
+          </div>
+        </div>
+      `).join('')
+      : '<div class="empty">該当する場所がありません</div>';
+  }
+
+  window.setImportFilter = (mode) => { filterMode = mode; render(); };
+  window.toggleImportCheck = (id) => {
+    const c = candidates.find(x => x.id === id);
+    if (c) { c.checked = !c.checked; render(); }
+  };
+  window.checkAllImport = (val) => {
+    const list = filterMode === 'food' ? candidates.filter(c => c.isFood) : candidates;
+    list.forEach(c => c.checked = val);
+    render();
+  };
+
+  render();
+  document.getElementById('import-preview-modal').classList.add('open');
+}
+
+async function executeImport() {
+  const toImport = importCandidates.filter(c => c.checked);
+  if (!toImport.length) { toast('1件以上選択してください'); return; }
+
+  // 既存スポットと重複チェック（名前で判定）
+  const existing = new Set(spots.map(s => s.name));
+  const newSpots = toImport.filter(c => !existing.has(c.name));
+  const dupCount = toImport.length - newSpots.length;
+  if (!newSpots.length) { toast('すべて重複のため追加されませんでした'); return; }
+
+  closeModal('import-preview-modal');
+  toast(`${newSpots.length}件を保存中…`);
+
+  if (demoMode) {
+    spots.push(...newSpots);
+    renderAll();
+    toast(`${newSpots.length}件インポートしました！${dupCount?'（重複'+dupCount+'件スキップ）':''}`);
+    return;
+  }
+
+  // 10件ずつまとめて保存（並列処理で高速化）
+  const BATCH = 10;
+  let saved = 0;
+  for (let i = 0; i < newSpots.length; i += BATCH) {
+    const batch = newSpots.slice(i, i + BATCH);
+    await Promise.all(batch.map(async spot => {
+      const res = await gasCall({ action: 'saveSpot', spot });
+      if (res.status === 'ok') {
+        spot.id = res.data?.id || spot.id;
+        spots.push(spot);
+        saved++;
+      }
+    }));
+    // 進捗を表示
+    toast(`保存中… ${Math.min(i + BATCH, newSpots.length)}/${newSpots.length}件`);
+  }
+  renderAll();
+  toast(`${saved}件インポートしました！${dupCount?'（重複'+dupCount+'件スキップ）':''}`);
+}
+
+// PlaceIDから緯度経度を取得
+async function geocodeByPlaceId(candidates) {
+  if (!window.google || !google.maps.places) return;
+  const svc = new google.maps.places.PlacesService(map);
+  for (const c of candidates) {
+    await new Promise(resolve => {
+      svc.getDetails({ placeId: c.placeId, fields: ['geometry','name'] }, (place, status) => {
+        if (status === 'OK' && place?.geometry?.location) {
+          c.lat = place.geometry.location.lat();
+          c.lng = place.geometry.location.lng();
+          if (!c.name && place.name) c.name = place.name;
+        }
+        resolve();
+      });
+    });
+    // API制限を避けるため少し待つ
+    await new Promise(r => setTimeout(r, 100));
+  }
+}
+
+function getDemoSpots() {
+  return [
+    { id:'d1', name:'軽井沢ブルワリー', lat:36.348, lng:138.634, date:'2024-09-14', rating:5, tags:['カフェ'], wantAgain:true, visitCount:2, memo:'クラフトビールが絶品！テラス席が最高', url:'', photoUrl:'' },
+    { id:'d2', name:'万平ホテル カフェテラス', lat:36.349, lng:138.636, date:'2024-05-03', rating:4, tags:['カフェ'], wantAgain:true, visitCount:1, memo:'ジョン・レノンも愛した老舗ホテルのカフェ', url:'', photoUrl:'' },
+    { id:'d3', name:'腸詰屋 軽井沢', lat:36.346, lng:138.632, date:'2024-09-14', rating:4, tags:['カフェ'], wantAgain:false, visitCount:1, memo:'ソーセージが美味しい', url:'', photoUrl:'' },
+  ];
+}
+</script>
+</body>
+</html>
